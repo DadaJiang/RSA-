@@ -1,0 +1,184 @@
+import java.util.Calendar;
+import javax.crypto.Cipher;
+import java.io.*;
+import java.security.*;
+import java.security.spec.*;
+import java.*;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+public class Adam {  
+    private static String ALGORITHM = "RSA/ECB/NOPadding";
+    public static void main(String args[]) {
+        Adam adam = new Adam();
+        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        try {
+            String path = "/Users/dada/Desktop/test3";
+	    
+	    //	        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA","BC");
+	    //	final int KEY_SIZE = 128;
+	    //  keyGen.initialize(KEY_SIZE);
+	    //     KeyPair generatedKeyPair = keyGen.genKeyPair();
+         
+	    //adam.dumpKeyPair(generatedKeyPair);
+	    //     adam.SaveKeyPair(path, generatedKeyPair);
+            
+	      KeyPair loadedKeyPair = adam.LoadKeyPair(path, "RSA");
+	     KeyPair loadedKeyPair2 = adam.LoadKeyPair2(path, "RSA");
+	     String plainText = "da";
+	     
+            System.out.println("Encryption:");
+            // Initiate the encryptor.                                          
+	     myEncryption encryption = new myEncryption();
+            // Initiate a variable for storing the encrypting result.           
+             byte[] result = null;
+	     byte[] result2=null;
+	     // Encrypt
+	    
+	       PublicKey pub = loadedKeyPair.getPublic();
+	      PrivateKey priv = loadedKeyPair.getPrivate();
+	       	       PublicKey pub2 = loadedKeyPair2.getPublic();
+	                           PrivateKey priv2 = loadedKeyPair2.getPrivate();
+	      result = encryption.cryptByRSA(plainText.getBytes("UTF-8"),pub, ALGORITHM, Cipher.ENCRYPT_MODE);
+	      result2 = encryption.cryptByRSA(result,pub2, ALGORITHM, Cipher.ENCRYPT_MODE);
+	        //String plainText2= new String(result,"UTF-8");
+	      	      // System.out.println("加密前的字符："+plainText2);
+	     System.out.println("加密1次後的字符："+getHexString(result));
+	     	       System.out.println("加密2次後的字符："+getHexString(result2));
+	          System.out.println("加密2次後的長度："+result.length);
+	      //System.out.println("解密後的字符："+des.decrypt(des.encrypt(plainText2)));
+			
+	      
+	     // Decrypt                                                      
+	      System.out.println("Decryption:");
+	             
+	       byte[] decryptResult = encryption.cryptByRSA(result2, priv2, ALGORITHM, Cipher.DECRYPT_MODE);
+	       System.out.println("解密1次後的字符："+getHexString(decryptResult));
+	       byte[] decryptResult2 = encryption.cryptByRSA(decryptResult, priv, ALGORITHM, Cipher.DECRYPT_MODE);
+	       System.out.println("Decrypted string: " + new String(decryptResult2, "UTF-8"));
+	     
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+    }
+    
+    private void dumpKeyPair(KeyPair keyPair) {
+        PublicKey pub = keyPair.getPublic();
+       // PublicKey pub = "MDwwDQYJKoZIhvcNAQEBBQADKwAwKAIhALFKwD9FSCv3vwD0H2qyRzZNmJnyz4Sfu/cxkrURa5cFAgMBAAE=";
+        System.out.println("Public Key: " +pub.getEncoded());
+        System.out.println("Public Key: " + getHexString(pub.getEncoded()));
+        PrivateKey priv = keyPair.getPrivate();
+        System.out.println("Private Key: " + getHexString(priv.getEncoded()));
+    }
+    
+    public static String getHexString(byte[] b) {
+        String result = "";
+        for (int i = 0; i < b.length; i++) {
+            result += Integer.toString((b[i] & 0xff) + 0x100, 16).substring(1);
+        }
+        return result;
+    }
+    
+    public void SaveKeyPair(String path, KeyPair keyPair) throws IOException {
+        PrivateKey privateKey = keyPair.getPrivate();
+        PublicKey publicKey = keyPair.getPublic();
+        
+        // Store Public Key.
+        X509EncodedKeySpec x509EncodedKeySpec = new X509EncodedKeySpec(
+                                                                       publicKey.getEncoded());
+        FileOutputStream fos = new FileOutputStream(path + "/public2.key");
+        fos.write(x509EncodedKeySpec.getEncoded());
+        fos.close();
+        
+        // Store Private Key.
+        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(
+                                                                          privateKey.getEncoded());
+        fos = new FileOutputStream(path + "/private2.key");
+        fos.write(pkcs8EncodedKeySpec.getEncoded());
+        fos.close();
+    }
+    
+    public KeyPair LoadKeyPair(String path, String algorithm)
+    throws IOException, NoSuchAlgorithmException,
+    InvalidKeySpecException {
+        // Read Public Key.
+        
+        File filePublicKey = new File(path + "/public.key");
+        FileInputStream fis = new FileInputStream(path + "/public.key");
+        byte[] encodedPublicKey = new byte[(int) filePublicKey.length()];
+        fis.read(encodedPublicKey);
+	        fis.close();
+        
+
+     //   System.out.println("Public Key 1: " + getHexString(encodedPublicKey));
+        
+        System.out.println("Public Key 1 length: " + encodedPublicKey.length);
+
+        
+        // Read Private Key.
+		        File filePrivateKey = new File(path + "/private.key");
+	  fis = new FileInputStream(path + "/private.key");
+	 byte[] encodedPrivateKey = new byte[(int) filePrivateKey.length()];
+        fis.read(encodedPrivateKey);
+	 fis.close();
+        
+	//byte[] encodedPrivateKey=hexStringToByteArray(privatekeyHex);
+     //   System.out.println("Private Key 1: " + getHexString(encodedPrivateKey));
+        
+        System.out.println("Private Key 1 length: " + encodedPrivateKey.length);
+        
+        // Generate KeyPair.
+        KeyFactory keyFactory = KeyFactory.getInstance(algorithm);
+        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(
+                                                                  encodedPublicKey);
+        PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+        
+        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(
+                                                                     encodedPrivateKey);
+        PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
+        
+        return new KeyPair(publicKey, privateKey);
+    }
+    public KeyPair LoadKeyPair2(String path, String algorithm)
+	throws IOException, NoSuchAlgorithmException,
+	       InvalidKeySpecException {
+        // Read Public Key.                                                                                                                                                                                 
+        File filePublicKey = new File(path + "/public2.key");
+        FileInputStream fis = new FileInputStream(path + "/public2.key");
+        byte[] encodedPublicKey = new byte[(int) filePublicKey.length()];
+        fis.read(encodedPublicKey);
+        fis.close();
+
+        // Read Private Key.                                                                                                                                                                                
+        File filePrivateKey = new File(path + "/private2.key");
+        fis = new FileInputStream(path + "/private2.key");
+        byte[] encodedPrivateKey = new byte[(int) filePrivateKey.length()];
+        fis.read(encodedPrivateKey);
+        fis.close();
+
+        // Generate KeyPair.                                                                                                                                                                                
+        KeyFactory keyFactory = KeyFactory.getInstance(algorithm);
+        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(
+                                                                  encodedPublicKey);
+        PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+
+        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(
+                                                                     encodedPrivateKey);
+        PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
+
+        return new KeyPair(publicKey, privateKey);
+    }
+    public static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                                  + Character.digit(s.charAt(i + 1), 16));
+        }
+        return data;
+    }
+
+}
